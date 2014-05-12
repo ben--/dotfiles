@@ -1,0 +1,5 @@
+#!/bin/bash
+
+while read; do
+      echo "$(date +"%Y-%m-%d %H:%M:%S") $REPLY"
+done
