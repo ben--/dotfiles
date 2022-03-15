@@ -1,4 +1,5 @@
 . ~/.bash.d/aliases.sh
+. ~/.bash.d/docker.sh
 . ~/.bash.d/git.sh
 . ~/.bash.d/tmux.sh
 
