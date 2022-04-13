@@ -71,3 +71,5 @@
 
 (after! org
   (setq org-tags-column -77))
+
+(evil-set-initial-state 'Info-mode 'emacs)
