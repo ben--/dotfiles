@@ -1,6 +1,7 @@
 . ~/.bash.d/aliases.sh
 . ~/.bash.d/docker.sh
 . ~/.bash.d/git.sh
+. ~/.bash.d/history.bash
 . ~/.bash.d/tmux.sh
 
 PS1='\[\e[1;34m\]\W\[\e[0;32m\]\$\[\e[m\] '
