@@ -73,3 +73,5 @@
   (setq org-tags-column -77))
 
 (evil-set-initial-state 'Info-mode 'emacs)
+
+(map! :g "M-s-c" 'ox-clip-formatted-copy)
