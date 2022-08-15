@@ -1,5 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
-while read; do
-      echo "$(date +"%Y-%m-%d %H:%M:%S") $REPLY"
-done
+import sys
+import time
+
+while True:
+    l = sys.stdin.readline()
+    t = time.time()
+    if l == "":
+        break
+
+    ts = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{ts}{str(t%1)[1:5]} {l}", end="")
