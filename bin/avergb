@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+
+import re
+import sys
+
+
+_re_3hex = re.compile("[0-9a-fA-F]{3}")
+_re_6hex = re.compile("[0-9a-fA-F]{6}")
+
+def color(seed):
+    if _re_6hex.fullmatch(seed):
+        return [int(seed[i:i+2],16) for i in range(0,6,2)]
+    if _re_3hex.fullmatch(seed):
+        return [int(seed[i] + seed[i],16) for i in range(3)]
+
+    raise ValueError(f"Unknown color: {seed}")
+
+
+rgbs = [color(arg) for arg in sys.argv[1:]]
+avergb = [sum(rgb[i] for rgb in rgbs)//len(rgbs) for i in range(3)]
+
+print("".join(f"{i:02x}" for i in avergb))
