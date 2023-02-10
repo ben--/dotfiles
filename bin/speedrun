@@ -4,6 +4,7 @@ import os
 import re
 import subprocess as sp
 import sys
+import time
 from datetime import datetime
 
 TAG = "speedrun"
@@ -97,6 +98,9 @@ if __name__ == "__main__":
         monitor(["nettop", "-m", "route", "-l0"]),
         monitor(["dumpcap", "-q", "-w", log_filename("dumpcap", "pcapng")])
     ]
+
+    print("pausing 2s to let monitors settle\n")
+    time.sleep(2)
 
     run_command(["date"], output=just_print)
     run_command(["fast", "--json"])
