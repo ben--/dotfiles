@@ -67,7 +67,8 @@ def process_airport(out):
     # }
 
 def monitor(args):
-    print(f"MONITOR: {' '.join(args)}")
+    print(f"$ {' '.join(args)} &")
+    print(f"logging output to {log_filename(args[0])}\n")
 
     # FIXME: This leads file descriptors ... consider cleaning up
     out = open(log_filename(args[0]), "w")
