@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
+import json
 import os
 import re
+import socket
 import subprocess as sp
 import sys
 import time
@@ -49,7 +51,8 @@ def run_command(cmd_args, processor=None, output=log_and_print):
 
     try:
         return processor(out) if processor else dict()
-    finally:
+    except:
+        print("failed to process output, continuing...")
         return dict()
 
 def process_airport(out):
@@ -67,6 +70,9 @@ def process_airport(out):
     #     "channel": stats["channel"],
     # }
 
+def process_json(out):
+    return json.loads(out)
+
 def monitor(args):
     print(f"$ {' '.join(args)} &")
     print(f"logging output to {log_filename(args[0])}\n")
@@ -80,18 +86,21 @@ if __name__ == "__main__":
     interface = sys.argv[1]
 
     timestamp = datetime.now().strftime("%Y-%m-%d-%H%M")
-    LOG_DIR = os.path.join(LOG_ROOT, f"{TAG}-{timestamp}")
+    hostname = socket.gethostname()
+    LOG_DIR = os.path.join(LOG_ROOT, f"{TAG}-{timestamp}-{hostname}")
 
     if os.path.exists(LOG_DIR):
         sys.stderr.write(f"cowardly refusing to clobber {LOG_DIR}\n")
         sys.exit(1)
     os.makedirs(LOG_DIR)
 
-    run_command([AIRPORT_UTIL, "-I"], process_airport)
+    output = {}
+
+    output.update(run_command([AIRPORT_UTIL, "-I"], processor=process_airport))
     run_command(["ifconfig", "-v", interface], output=just_print)
-    run_command(["ifconfig", "-v"], output=log)
-    run_command(["netstat", "-rn"], output=log)
-    run_command(["ps", "auxww"], output=log_and_head)
+    output.update(run_command(["ifconfig", "-v"], output=log))
+    output.update(run_command(["netstat", "-rn"], output=log))
+    output.update(run_command(["ps", "auxww"], output=log_and_head))
 
     monitors = [
         monitor(["top", "-l0"]),
@@ -103,7 +112,7 @@ if __name__ == "__main__":
     time.sleep(2)
 
     run_command(["date"], output=just_print)
-    run_command(["fast", "--json"])
+    output.update(run_command(["fast", "--json"], processor=process_json))
     run_command(["date"], output=just_print)
 
     for m in monitors:
@@ -122,5 +131,11 @@ if __name__ == "__main__":
         except sp.TimeoutExpired:
             print(f"killing {m.args[0]}")
             m.kill()
+
+    if "downloadSpeed" in output:
+        print("renaming output directory to include speed...")
+        new_log_dir = f"{LOG_DIR}-{output['downloadSpeed']}Mbps"
+        os.rename(LOG_DIR, new_log_dir)
+        LOG_DIR = new_log_dir
 
     print(f"detailed logs in {LOG_DIR}")
