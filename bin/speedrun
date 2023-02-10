@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+
+import os
+import re
+import subprocess as sp
+import sys
+from datetime import datetime
+
+TAG = "speedrun"
+LOG_ROOT = os.path.join(os.path.expanduser("~"), TAG)
+LOG_DIR = None
+AIRPORT_UTIL = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
+
+def log_filename(cmd, ext="txt"):
+    return os.path.join(LOG_DIR, f"{os.path.basename(cmd)}.{ext}")
+
+def just_print(cmd, out):
+    print(out)
+
+def just_head(cmd, out):
+    lines=10
+    columns=128
+
+    print("\n".join([l[:columns] for l in out.splitlines()[:lines]]))
+    print("[...]\n")
+
+def log_and_head(cmd, out):
+    log(cmd, out)
+    just_head(cmd, out)
+
+def log_and_print(cmd, out):
+    log(cmd, out)
+    print(out)
+
+def log(cmd, out):
+    print(f"printing output to {log_filename(cmd)}")
+    with open(log_filename(cmd), "w") as f:
+        f.write(out)
+
+def run_command(cmd_args, processor=None, output=log_and_print):
+    print(f"$ {' '.join(cmd_args)}")
+
+    p = sp.Popen(cmd_args, stdout=sp.PIPE, stderr=sp.STDOUT, encoding="utf-8")
+    out, _ = p.communicate()
+
+    if output:
+        output(cmd_args[0], out)
+
+    try:
+        return processor(out) if processor else dict()
+    finally:
+        return dict()
+
+def process_airport(out):
+    stats = dict(re.split(": ?", l.strip()) for l in out.splitlines())
+
+    return stats
+    #     {
+    #     "RSSI": stats["agrCtlRSSI"],
+    #     "noise": stats["agrCtlNoise"],
+    #     "txRate": stats["lastTxRate"],
+    #     "SSID": stats["SSID"],
+    #     "MCS": stats["MCS"],
+    #     "guardInterval": stats["guardInterval"],
+    #     "NSS": stats["NSS"],
+    #     "channel": stats["channel"],
+    # }
+
+def monitor(args):
+    print(f"MONITOR: {' '.join(args)}")
+
+    # FIXME: This leads file descriptors ... consider cleaning up
+    out = open(log_filename(args[0]), "w")
+
+    return sp.Popen(args, stdin=sp.DEVNULL, stdout=out, stderr=sp.STDOUT)
+
+if __name__ == "__main__":
+    interface = sys.argv[1]
+
+    timestamp = datetime.now().strftime("%Y-%m-%d-%H%M")
+    LOG_DIR = os.path.join(LOG_ROOT, f"{TAG}-{timestamp}")
+
+    if os.path.exists(LOG_DIR):
+        sys.stderr.write(f"cowardly refusing to clobber {LOG_DIR}\n")
+        sys.exit(1)
+    os.makedirs(LOG_DIR)
+
+    run_command([AIRPORT_UTIL, "-I"], process_airport)
+    run_command(["ifconfig", "-v", interface], output=just_print)
+    run_command(["ifconfig", "-v"], output=log)
+    run_command(["netstat", "-rn"], output=log)
+    run_command(["ps", "auxww"], output=log_and_head)
+
+    monitors = [
+        monitor(["top", "-l0"]),
+        monitor(["nettop", "-m", "route", "-l0"]),
+        monitor(["dumpcap", "-q", "-w", log_filename("dumpcap", "pcapng")])
+    ]
+
+    run_command(["date"], output=just_print)
+    run_command(["fast", "--json"])
+    run_command(["date"], output=just_print)
+
+    for m in monitors:
+        #print(f"stopping {m.args[0]}...")
+        m.terminate()
+
+    for m in monitors:
+        try:
+            m.wait(5)
+            # FIXME: top (at least) returns an error after being terminated
+            # rc = m.wait(5)
+            # if rc != 0:
+            #     sys.stderr.write(f"command failed (rc {rc}): {' '.join(m.args)}\n")
+            #     sys.exit(1)
+            #print(f"{m.args[0]} stopped")
+        except sp.TimeoutExpired:
+            print(f"killing {m.args[0]}")
+            m.kill()
+
+    print(f"detailed logs in {LOG_DIR}")
