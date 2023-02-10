@@ -33,7 +33,7 @@ def log_and_print(cmd, out):
     print(out)
 
 def log(cmd, out):
-    print(f"printing output to {log_filename(cmd)}")
+    print(f"printing output to {log_filename(cmd)}\n")
     with open(log_filename(cmd), "w") as f:
         f.write(out)
 
